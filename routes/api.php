@@ -14,6 +14,34 @@ use Illuminate\Support\Facades\Route;
 |
 */
 
-Route::get('GetallProduct', function () {
-    dd('nvnbv');
+
+
+Route::group(['middleware' => ['api','CheckPassword','ChangeLanguage'], 'namespace' => 'Api'], function () {
+
+	//--- Product Endpoints ---
+    Route::group(['prefix' => 'product','namespace'=>'Product'],function (){
+    	Route::get('/', 'ProductsController@index');
+    });
+
+    //--- User Endpoints ---
+    Route::group(['prefix' => 'user','namespace'=>'User'],function (){
+    	//Route::post('login', 'AuthController@login');
+    });
+
+    //--- Driver Endpoints ---
+    Route::group(['prefix' => 'driver','namespace'=>'Driver'],function (){
+    	//Route::post('login', 'AuthController@login');
+    });
+
+    //--- Offers Endpoints ---
+    Route::group(['prefix' => 'offers','namespace'=>'Offers'],function (){
+    
+    });
+
+	//--- Pages Endpoints ---
+    Route::group(['prefix' => 'pages','namespace'=>'Pages'],function (){
+    
+    });
+
 });
+
