@@ -26,6 +26,13 @@ Route::group(['middleware' => ['api','CheckPassword','ChangeLanguage'], 'namespa
     //--- User Endpoints ---
     Route::group(['prefix' => 'user','namespace'=>'User'],function (){
     	//Route::post('login', 'AuthController@login');
+        Route::get('currentorders', 'UsersController@currentorders');
+        Route::get('ordershistory', 'UsersController@ordershistory');
+        Route::get('order', 'UsersController@order');
+        Route::post('order', 'UsersController@orderplace');
+        Route::post('reorder', 'UsersController@reorder');
+        
+
     });
 
     //--- Driver Endpoints ---
