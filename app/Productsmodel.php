@@ -2,6 +2,7 @@
 
 namespace App;
 use Illuminate\Database\Eloquent\Model;
+use App\OrderItemsmodel;
 
 class Productsmodel extends Model
 {
@@ -9,10 +10,10 @@ class Productsmodel extends Model
 
       protected $fillable = [
         'name_en','name_ar' , 'price','photo'
-
-
     ];
     
-
+    public function OrderItemsmodel(){
+        return $this->hasMany('App\OrderItemsmodel','product_id');
+    }
 
 }

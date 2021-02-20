@@ -26,11 +26,26 @@ Route::group(['middleware' => ['api','CheckPassword','ChangeLanguage'], 'namespa
     //--- User Endpoints ---
     Route::group(['prefix' => 'user','namespace'=>'User'],function (){
     	//Route::post('login', 'AuthController@login');
+        Route::get('currentorders', 'UsersController@currentorders');
+        Route::get('ordershistory', 'UsersController@ordershistory');
+        Route::get('order', 'UsersController@order');
+        Route::post('order', 'UsersController@orderplace');
+        Route::post('reorder', 'UsersController@reorder');
+        Route::post('cancelorder', 'UsersController@cancelOrder');
+       
+ 
     });
 
     //--- Driver Endpoints ---
     Route::group(['prefix' => 'driver','namespace'=>'Driver'],function (){
     	//Route::post('login', 'AuthController@login');
+        Route::post('startorder', 'DriverController@startOrder');
+        //Route::get('finishorder', 'DriverController@finishOrder');
+        //Route::get('recievedcash', 'DriverController@recievedCash');
+        Route::get('assignedorders', 'DriverController@assignedOrders');
+        Route::get('ordershistory', 'DriverController@ordersHistory');
+        //Route::get('ongoingorder', 'DriverController@ongoingOrder');
+        Route::get('order', 'DriverController@order');
     });
 
     //--- Offers Endpoints ---
@@ -42,6 +57,14 @@ Route::group(['middleware' => ['api','CheckPassword','ChangeLanguage'], 'namespa
     Route::group(['prefix' => 'pages','namespace'=>'Pages'],function (){
     
     });
+
+
+    //--- Settings Endpoints ---
+    Route::group(['prefix' => 'settings','namespace'=>'Settings'],function (){
+        Route::get('order_min_price', 'SettingsController@order_min_price');
+        Route::get('today_max_price', 'SettingsController@today_max_price');
+        Route::get('sales_tax', 'SettingsController@sales_tax');
+    });    
 
 });
 
