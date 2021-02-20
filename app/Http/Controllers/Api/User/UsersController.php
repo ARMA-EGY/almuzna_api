@@ -11,6 +11,14 @@ use App\settings;
 use App\Traits\GeneralTrait;
 use Validator;
 
+// array functions array_Walk, array_reduce, array_*
+// $list_of_uids = [];
+// foreach($results as $res){
+//   $list_of_uids[] = $res["uid"];
+// }
+// $list_of_uids = array_reduce($results, function($item, $acc){
+//   return $acc + $item["uid"]
+// });
 
 class UsersController extends Controller
 {
@@ -106,8 +114,8 @@ class UsersController extends Controller
               $orderTotal = 0;
               $itemTotal = 0;
               foreach ($products as $product) {
-                $dbProduct = Productsmodel::where('name_en', $product['name'])->orWhere('name_ar', $product['name'])->get();
-                $itemTotal = $dbProduct[0]->price * $product['quantity'];
+                $dbProduct = Productsmodel::where('name_en', $product['name'])->orWhere('name_ar', $product['name'])->first();
+                $itemTotal = $dbProduct->price * $product['quantity'];
                 $orderTotal = $orderTotal + $itemTotal;
               }
 
@@ -240,6 +248,42 @@ class UsersController extends Controller
         return $this->returnSuccessMessage('order is placed successfully');        
       }      
 
+      public function cancelOrder(Request $request){
+        try {
+              //validation on the request
+              $rules = [
+                  "order_id" => "required|numeric",
+                  "refund_method" => "required|alpha_dash",
+              ];
+              $validator = Validator::make($request->all(), $rules);
+              if ($validator->fails()) {
+                  $code = $this->returnCodeAccordingToInput($validator);
+                  return $this->returnValidationError($code, $validator);
+              }
 
+
+              //place the total in the user wallet
+              if($request->post('refund_method') == "wallet")
+              {
+                $order = Ordersmodel::find($request->post('order_id'));
+                //****CODE**** (insert total in the user wallet)
+              }
+
+              //change order status to cancelled
+              Ordersmodel::where('id',$request->post('order_id'))->update([
+                       'status' => 'cancelled'
+              ]);
+
+              //success message
+              return $this->returnSuccessMessage('order is cancelled successfully');
+
+            } catch (\Exception $ex) {
+              return $this->returnError($ex->getCode(), $ex->getMessage());
+        }
+
+
+
+
+      }
 
 }
