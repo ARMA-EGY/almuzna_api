@@ -59,7 +59,7 @@ class UsersController extends Controller
 
       public function ordershistory()
       {
-        $ordershistory = Ordersmodel::with('OrderItemsmodel.Productsmodel')->where([
+        $ordershistory = Ordersmodel::where([
                 ['user_id', '=', 1],
                 ['status', '=', 'delivered'],
         ])->get();
