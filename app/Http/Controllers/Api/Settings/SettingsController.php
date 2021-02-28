@@ -45,21 +45,35 @@ class SettingsController extends Controller
       public function order_min_price()
       {
         $order_min_price = settings::select('decimal_value')->where('name','order_min_price')->first();
-        return $this->returnData('order_min_price', $order_min_price->decimal_value);
+        $rsData = $this->returnData('order_min_price', $order_min_price->decimal_value);
+        return response()->json($rsData, 200);
+
 
       }
 
       public function today_max_price()
       {
         $today_max_price = settings::select('decimal_value')->where('name','today_max_price')->first();
-        return $this->returnData('today_max_price', $today_max_price->decimal_value);
+        $rsData = $this->returnData('today_max_price', $today_max_price->decimal_value);
+        return response()->json($rsData, 200);
+
 
       }
 
       public function sales_tax()
       {
         $sales_tax = settings::select('decimal_value')->where('name','sales_tax')->first();
-        return $this->returnData('sales_tax', $sales_tax->decimal_value);
+        $rsData = $this->returnData('sales_tax', $sales_tax->decimal_value);
+        return response()->json($rsData, 200);
+
+
+      }
+
+      public function settings()
+      {
+        $settings = settings::all();
+        $rsData = $this->returnData('settings', $settings);
+        return response()->json($rsData, 200);
 
       }
 

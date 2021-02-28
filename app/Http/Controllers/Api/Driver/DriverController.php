@@ -50,9 +50,13 @@ class DriverController extends Controller
         ])->get();
 
         if($assignedOrders->isEmpty())
-                return $this->returnError('O404','no order found');
+        {
+          $error = $this->returnError('O404','no order found');
+          return response()->json($error, 404);          
+        } 
 
-        return $this->returnData('assignedOrders', $assignedOrders);
+        $rsData = $this->returnData('assignedOrders', $assignedOrders);
+        return response()->json($rsData, 200);   
 
       }
 
@@ -65,25 +69,33 @@ class DriverController extends Controller
         ])->get();
 
         if($ordershistory->isEmpty())
-                return $this->returnError('O404','no order found');
+        {
+          $error = $this->returnError('O404','no order found');
+          return response()->json($error, 404);          
+        } 
 
-        return $this->returnData('ordershistory', $ordershistory);
+        $rsData = $this->returnData('ordershistory', $ordershistory);
+        return response()->json($rsData, 200);  
+
 
       }
 
-      public function order(Request $request)
+      public function order($orderId)
       {
-        $id       = $request->get('id');
+        $id = $orderId;
         $order = Ordersmodel::with('OrderItemsmodel.Productsmodel')->where([
                 ['driver_id', '=', 1],
                 ['id', '=', $id],
         ])->get();
 
         if($order->isEmpty())
-                return $this->returnError('O404','no order found');
+        {
+          $error = $this->returnError('O404','no order found');
+          return response()->json($error, 404);          
+        }   
 
-        return $this->returnData('order', $order);
-      }
+        $rsData = $this->returnData('order', $order);
+        return response()->json($rsData, 200);       }
 
 
       public function startOrder(Request $request)
@@ -95,8 +107,10 @@ class DriverController extends Controller
           ];
           $validator = Validator::make($request->all(), $rules);
           if ($validator->fails()) {
-              $code = $this->returnCodeAccordingToInput($validator);
-              return $this->returnValidationError($code, $validator);
+            $code = $this->returnCodeAccordingToInput($validator);
+            $error = $this->returnValidationError($code, $validator);
+            return response()->json($error, 422);
+
           }
 
           //select an ongoing order
@@ -117,16 +131,20 @@ class DriverController extends Controller
                      'status' => 'on the way'
                       ]);
             //success message
-            return $this->returnSuccessMessage('order started successfully');  
+
+            $succesMsg = $this->returnSuccessMessage('order started successfully' , 'S003');
+            return response()->json($succesMsg, 200);                
           }
 
 
           //error message
-          return $this->returnError('O408','There is an ongoing order');
+           $error = $this->returnError('O408','There is an ongoing order');
+            return response()->json($error, 422);   
 
           
         } catch (\Exception $ex) {
-                      return $this->returnError($ex->getCode(), $ex->getMessage());
+            $error = $this->returnError($ex->getCode(),$ex->getMessage());
+            return response()->json($error, 500);  
                 }
       }      
 

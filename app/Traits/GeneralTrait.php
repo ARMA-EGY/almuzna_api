@@ -12,11 +12,11 @@ trait GeneralTrait
 
     public function returnError($errNum, $msg)
     {
-        return response()->json([
+        return [
             'status' => false,
             'errNum' => $errNum,
             'msg' => $msg
-        ]);
+        ];
     }
 
 
@@ -31,12 +31,12 @@ trait GeneralTrait
 
     public function returnData($key, $value, $msg = "")
     {
-        return response()->json([
+        return [
             'status' => true,
             'errNum' => "0000",
             'msg' => $msg,
-            $key => $value
-        ]);
+            'data' => $value
+        ];
     }
 
 
@@ -223,6 +223,30 @@ trait GeneralTrait
 
         else if ($input == "checkoutId")
             return 'E056';
+
+        else if ($input == "delivery_address")
+            return 'E057';
+
+        else if ($input == "delivery_date")
+            return 'E058';   
+
+        else if ($input == "street_no_name")
+            return 'E059';   
+
+        else if ($input == "bulding_no")
+            return 'E060';   
+
+        else if ($input == "floor")
+            return 'E061';   
+
+        else if ($input == "apartment")
+            return 'E062';   
+
+        else if ($input == "notes")
+            return 'E063';     
+            
+        else if ($input == "products")
+            return 'E064';                       
 
         else
             return "";

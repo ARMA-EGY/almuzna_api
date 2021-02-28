@@ -41,71 +41,90 @@ class UsersController extends Controller
      * @return \Illuminate\Contracts\Support\Renderable
      */
 
-
+//---------- TRANSACTIONS TABLE NEEDS TO BE ADDED WITH IT'S BACKEND -----------
       public function currentorders()
       {
+        $user = auth()->user();
+       // dd($user->id);
         $currentorders = Ordersmodel::with('OrderItemsmodel.Productsmodel')->where([
-                ['user_id', '=', 1],
+                ['user_id', '=', $user->id],
                 ['status', '!=', 'delivered'],
         ])->get();
 
         if($currentorders->isEmpty())
-                return $this->returnError('O404','no order found');
+        {
+          $error = $this->returnError('O404','no order found');
+          return response()->json($error, 404);          
+        }
 
-        return $this->returnData('currentorders', $currentorders);
+
+        $rsData = $this->returnData('currentorders', $currentorders);
+        return response()->json($rsData, 200); 
 
       }
 
 
       public function ordershistory()
       {
+        $user = auth()->user();
         $ordershistory = Ordersmodel::with('OrderItemsmodel.Productsmodel')->where([
-                ['user_id', '=', 1],
+                ['user_id', '=', $user->id],
                 ['status', '=', 'delivered'],
         ])->get();
 
         if($ordershistory->isEmpty())
-                return $this->returnError('O404','no order found');
+        {
+          $error = $this->returnError('O404','no order found');
+          return response()->json($error, 404);          
+        }
 
-        return $this->returnData('ordershistory', $ordershistory);
+        $rsData = $this->returnData('ordershistory', $ordershistory);
+        return response()->json($rsData, 200);        
 
       }
 
-      public function order(Request $request)
+      public function order($orderId)
       {
-        $id       = $request->get('id');
+        $id       = $orderId;
+        $user = auth()->user();
         $order = Ordersmodel::with('OrderItemsmodel.Productsmodel')->where([
-                ['user_id', '=', 1],
+                ['user_id', '=',  $user->id],
                 ['id', '=', $id],
         ])->get();
 
         if($order->isEmpty())
-                return $this->returnError('O404','no order found');
+        {
+          $error = $this->returnError('O404','no order found');
+          return response()->json($error, 404);          
+        }
 
-        return $this->returnData('order', $order);
+        $rsData = $this->returnData('order', $order);
+        return response()->json($rsData, 200);  
       }
 
+      //add the check on wallet if the wallet the payment
       public function orderplace(Request $request)
       {
         try {
-
+              $user = auth()->user();
               //validation on the request
                   //Add validation for products array learn from laravel docs.
               $rules = [
-                  "payment_method" => "required|alpha_dash",
+                  "payment_method" => "required|string",
                   "delivery_date" => "required|date",
-                  "delivery_address" => "required|alpha_dash",
-                  "street_no_name" => "nullable|alpha_dash",
-                  "bulding_no" => "nullable|alpha_dash",
-                  "floor" => "nullable|alpha_dash",
-                  "apartment" => "nullable|alpha_dash",
-                  "notes" => "nullable|alpha_dash",
+                  "delivery_address" => "required|string",
+                  "street_no_name" => "nullable|string",
+                  "bulding_no" => "nullable|string",
+                  "floor" => "nullable|string",
+                  "apartment" => "nullable|string",
+                  "notes" => "nullable|string",
                   "products" => "required",                
               ];
               $validator = Validator::make($request->all(), $rules);
               if ($validator->fails()) {
                   $code = $this->returnCodeAccordingToInput($validator);
-                  return $this->returnValidationError($code, $validator);
+                  $error = $this->returnValidationError($code, $validator);
+                  return response()->json($error, 422);
               }
 
 
@@ -124,21 +143,30 @@ class UsersController extends Controller
               $today_max_price = settings::where('name','today_max_price')
               ->get('decimal_value');
               if(  date('Ymd', strtotime($request->post('delivery_date'))) < date('Ymd') )
-                return $this->returnError('O001','please enter a valid date');
+              {
+                $error = $this->returnError('O001','please enter a valid date');
+                return response()->json($error, 422);          
+              }  
               if($orderTotal > $today_max_price[0]->decimal_value && date('Ymd', strtotime($request->post('delivery_date'))) == date('Ymd'))
-                return $this->returnError('O001','order can not be delivered today');
+              {
+                $error = $this->returnError('O002','order can not be delivered today');
+                return response()->json($error, 422);          
+              }   
 
 
               //validate that the order is greater than the minimum order price
               $order_min_price = settings::where('name','order_min_price')
               ->get('decimal_value');
               if($orderTotal <= $order_min_price[0]->decimal_value)
-                return $this->returnError('O002','order do not exceed minimum amount');
+              {
+                $error = $this->returnError('O003','order do not exceed minimum amount');
+                return response()->json($error, 422);          
+              }                  
 
 
               //insert order in db           
               $order = Ordersmodel::create([ 
-                'user_id' => 1,
+                'user_id' =>  $user->id,
                 'status' => 'pending',
                 'step' => 1,
                 'payment_method' => $request->post('payment_method'), 
@@ -172,39 +200,44 @@ class UsersController extends Controller
 
 
         } catch (\Exception $ex) {
-            return $this->returnError($ex->getCode(), $ex->getMessage());
+                $error = $this->returnError($ex->getCode(),$ex->getMessage());
+                return response()->json($error, 500);
         }
-        return $this->returnSuccessMessage('order is placed successfully');
+        $succesMsg = $this->returnSuccessMessage('order is placed successfully' , 'S001');
+        return response()->json($succesMsg, 200); 
       }
 
+      //check that the order exist
       public function reorder(Request $request)
       {
+        $user = auth()->user();
         try {
               
               $rules = [
                   "lastOrder_id" => "required|numeric",
-                  "payment_method" => "required|alpha_dash",
+                  "payment_method" => "required|string",
                   "delivery_date" => "required|date",
-                  "delivery_address" => "required|alpha_dash",
-                  "street_no_name" => "nullable|alpha_dash",
-                  "bulding_no" => "nullable|alpha_dash",
-                  "floor" => "nullable|alpha_dash",
-                  "apartment" => "nullable|alpha_dash",
-                  "notes" => "nullable|alpha_dash",               
+                  "delivery_address" => "required|string",
+                  "street_no_name" => "nullable|string",
+                  "bulding_no" => "nullable|string",
+                  "floor" => "nullable|string",
+                  "apartment" => "nullable|string",
+                  "notes" => "nullable|string",               
               ];
 
               $validator = Validator::make($request->all(), $rules);
 
               if ($validator->fails()) {
                   $code = $this->returnCodeAccordingToInput($validator);
-                  return $this->returnValidationError($code, $validator);
+                  $error = $this->returnValidationError($code, $validator);
+                  return response()->json($error, 422);
               }
 
              
 
               //calculate the total
               $order = Ordersmodel::create([ 
-                'user_id' => 1,
+                'user_id' =>  $user->id,
                 'status' => 'pending',
                 'step' => 1,
                 'payment_method' => $request->post('payment_method'), 
@@ -243,22 +276,29 @@ class UsersController extends Controller
 
 
         } catch (\Exception $ex) {
-            return $this->returnError($ex->getCode(), $ex->getMessage());
+          $error = $this->returnError($ex->getCode(),$ex->getMessage());
+          return response()->json($error, 500);                  
+
         }
-        return $this->returnSuccessMessage('order is placed successfully');        
+        $succesMsg = $this->returnSuccessMessage('order is placed successfully' , 'S001');
+        return response()->json($succesMsg, 200);                 
       }      
 
+
+      //this function is return te money to the user's wallet only
+      //check that the order exist
       public function cancelOrder(Request $request){
         try {
               //validation on the request
               $rules = [
                   "order_id" => "required|numeric",
-                  "refund_method" => "required|alpha_dash",
+                  "refund_method" => "required|string",
               ];
               $validator = Validator::make($request->all(), $rules);
               if ($validator->fails()) {
-                  $code = $this->returnCodeAccordingToInput($validator);
-                  return $this->returnValidationError($code, $validator);
+                $code = $this->returnCodeAccordingToInput($validator);
+                $error = $this->returnValidationError($code, $validator);
+                return response()->json($error, 422);
               }
 
 
@@ -275,15 +315,201 @@ class UsersController extends Controller
               ]);
 
               //success message
-              return $this->returnSuccessMessage('order is cancelled successfully');
+              $succesMsg = $this->returnSuccessMessage('order is cancelled successfully' , 'S002');
+              return response()->json($succesMsg, 200);   
 
             } catch (\Exception $ex) {
-              return $this->returnError($ex->getCode(), $ex->getMessage());
+                $error = $this->returnError($ex->getCode(),$ex->getMessage());
+                return response()->json($error, 500);                  
         }
 
 
 
 
+      }
+
+
+      public function editorder($orderId)
+      {
+        $id       = $orderId;
+        $user = auth()->user();
+        $order = Ordersmodel::with('OrderItemsmodel.Productsmodel')->where([
+                ['user_id', '=', $user->id],
+                ['id', '=', $id],
+        ])->first();
+
+
+        if(!$order)
+        {
+          $error = $this->returnError('O404','no order found');
+          return response()->json($error, 404);          
+        }                   
+        if($order->status != "pending" )
+        {
+          $error = $this->returnError('O406','no edits can be made on this order');
+          return response()->json($error, 422);          
+        }                        
+                
+        $rsData = $this->returnData('order', $order);
+        return response()->json($rsData, 200);     
+
+      }
+
+
+      public function updateorder(Request $request)
+      {
+        $user = auth()->user();
+        try {
+
+              //validation on the request
+                  //Add validation for products array learn from laravel docs.
+              $rules = [
+                  "order_id" => "required|numeric",
+                  "delivery_date" => "required|date",
+                  "delivery_address" => "required|string",
+                  "street_no_name" => "nullable|string",
+                  "bulding_no" => "nullable|string",
+                  "floor" => "nullable|string",
+                  "apartment" => "nullable|string",
+                  "notes" => "nullable|string",
+                  "products" => "required",                
+              ];
+              $validator = Validator::make($request->all(), $rules);
+              if ($validator->fails()) {
+                $code = $this->returnCodeAccordingToInput($validator);
+                $error = $this->returnValidationError($code, $validator);
+                return response()->json($error, 422);
+              }
+
+
+              //calculate order total price
+              $products = $request->post('products');
+              $orderTotal = 0;
+              $itemTotal = 0;
+              foreach ($products as $product) {
+                $dbProduct = Productsmodel::where('name_en', $product['name'])->orWhere('name_ar', $product['name'])->first();
+                $itemTotal = $dbProduct->price * $product['quantity'];
+                $orderTotal = $orderTotal + $itemTotal;
+              }
+
+
+              //check that the order meet the delivery date requirments
+              $today_max_price = settings::where('name','today_max_price')
+              ->get('decimal_value');
+              if(  date('Ymd', strtotime($request->post('delivery_date'))) < date('Ymd') )
+              {
+                $error = $this->returnError('O001','please enter a valid date');
+                return response()->json($error, 422);          
+              }   
+              if($orderTotal > $today_max_price[0]->decimal_value && date('Ymd', strtotime($request->post('delivery_date'))) == date('Ymd'))
+              {
+                $error = $this->returnError('O002','order can not be delivered today');
+                return response()->json($error, 422);          
+              }                   
+
+
+              //validate that the order is greater than the minimum order price
+              $order_min_price = settings::where('name','order_min_price')
+              ->get('decimal_value');
+              if($orderTotal <= $order_min_price[0]->decimal_value)
+              {
+                $error = $this->returnError('O003','order do not exceed minimum amount');
+                return response()->json($error, 422);          
+              }  
+
+
+              //get the last payment method and total
+              $order = Ordersmodel::find($request->post('order_id'));
+              if(!$order)
+              {
+                $error = $this->returnError('O404','no order found to be updated');
+                return response()->json($error, 404);          
+              }                  
+              if($order->status != "pending" )  
+              {
+                $error = $this->returnError('O406','no edits can be made on this order');
+                return response()->json($error, 422);          
+              }                    
+              $lpayment_method = $order->payment_method;
+              $ltotal = $order->total;
+              $lstatus = $order->status;
+
+
+              //insert order in db           
+              $order = Ordersmodel::where('id',$request->post('order_id'))->update([ 
+                'user_id' => $user->id,
+                'status' => $lstatus,
+                'step' => 1,
+                'payment_method' => $lpayment_method, 
+                'delivery_date' => $request->post('delivery_date'),
+                'delivery_address' => $request->post('delivery_address'),
+                'street_no_name' => $request->post('street_no_name'),
+                'bulding_no' => $request->post('bulding_no'),
+                'floor' => $request->post('floor'),
+                'apartment' => $request->post('apartment'),
+                'notes' => $request->post('notes'),
+                'total' => $orderTotal
+              ]);
+
+              //delete all items to be insereted again
+              OrderItemsmodel::where('order_id', $request->post('order_id'))->delete();
+
+              //add order items to db
+              $itemTotal = 0;
+              foreach ($products as $product) {
+                $dbProduct = Productsmodel::where('name_en', $product['name'])
+                ->orWhere('name_ar', $product['name'])
+                ->get();
+                $itemTotal = $dbProduct[0]->price * $product['quantity'];
+                OrderItemsmodel::create([ 
+                'product_id' => $dbProduct[0]->id,
+                'order_id' => $request->post('order_id'),
+                'quantity' => $product['quantity'],
+                'total' => $itemTotal
+                ]);
+              }
+
+
+
+
+        } catch (\Exception $ex) {
+          $error = $this->returnError($ex->getCode(),$ex->getMessage());
+          return response()->json($error, 500);
+        }
+
+        if($orderTotal > $ltotal)
+        {
+          if($lpayment_method == "cash")
+          {
+            $msg = "total is large, your order is updated successfully, your payment is cash";
+            $code = "oub001";    
+          }
+          elseif ($lpayment_method == "visa") {
+            $msg = "total is large, Please pay using your card, your payment is using card";
+            $code = "oub002";     
+          }elseif ($lpayment_method == "wallet") {
+            //check the user wallet then return success (if sufficient) or failure (if not sufficient) 
+            $msg = "total is large, the amount is deducted from your wallet";
+            $code = "oub003";     
+          }
+
+        }
+
+        if($orderTotal < $ltotal)
+        {
+          $msg = "total is less, your order is updated successfully, cach is added to your wallet";
+          $code = "ous001";
+        } 
+
+
+        if($orderTotal == $ltotal)
+        {
+          $msg = "total is the same, your order is updated successfully";
+          $code = "ous001";
+        }       
+
+        $succesMsg = $this->returnSuccessMessage($msg , $code);
+        return response()->json($succesMsg, 200);  
       }
 
 }

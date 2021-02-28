@@ -46,6 +46,16 @@ return [
             'provider' => 'users',
             'hash' => false,
         ],
+
+        'customers-api' => [
+            'driver' => 'jwt',
+            'provider' => 'customers',
+        ],
+
+        'drivers-api' => [
+            'driver' => 'jwt',
+            'provider' => 'drivers',
+        ],        
     ],
 
     /*
@@ -69,7 +79,14 @@ return [
         'users' => [
             'driver' => 'eloquent',
             'model' => App\User::class,
+        ], 'customers' => [
+            'driver' => 'eloquent',
+            'model' => App\customers::class,
+        ], 'drivers' => [
+            'driver' => 'eloquent',
+            'model' => App\drivers::class,
         ],
+        
 
         // 'users' => [
         //     'driver' => 'database',
