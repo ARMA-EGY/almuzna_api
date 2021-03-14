@@ -12,7 +12,7 @@ class customers extends Authenticatable  implements JWTSubject
     protected $table = 'customers';
 
     protected $fillable = [
-        'name', 'email','phone','gender', 'wallet', 'first_order','password'
+        'name', 'email','phone','gender', 'wallet', 'first_order','password','countryCode','photo','dateofbirth'
     ];
 
 

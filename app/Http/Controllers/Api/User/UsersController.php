@@ -8,8 +8,12 @@ use App\Productsmodel;
 use App\OrderItemsmodel;
 use App\Ordersmodel;
 use App\settings;
+use App\Message;
+use App\ReceiverEmail;
 use App\Traits\GeneralTrait;
 use Validator;
+use App\Mail\ContactUs;
+use Mail; 
 
 // array functions array_Walk, array_reduce, array_*
 // $list_of_uids = [];
@@ -32,7 +36,7 @@ class UsersController extends Controller
     
     public function __construct()
     {
-		  //$this->middleware('auth');
+      //$this->middleware('auth');
     }
 
     /**
@@ -49,7 +53,10 @@ class UsersController extends Controller
         $currentorders = Ordersmodel::with('OrderItemsmodel.Productsmodel')->where([
                 ['user_id', '=', $user->id],
                 ['status', '!=', 'delivered'],
-        ])->get();
+        ])->Where([
+          ['user_id', '=', $user->id],
+          ['status', '!=', 'cancelled'],])
+->get();
 
         if($currentorders->isEmpty())
         {
@@ -70,7 +77,10 @@ class UsersController extends Controller
         $ordershistory = Ordersmodel::with('OrderItemsmodel.Productsmodel')->where([
                 ['user_id', '=', $user->id],
                 ['status', '=', 'delivered'],
-        ])->get();
+        ])->orWhere([
+          ['user_id', '=', $user->id],
+          ['status', '=', 'cancelled'],])
+->get();
 
         if($ordershistory->isEmpty())
         {
@@ -113,11 +123,17 @@ class UsersController extends Controller
                   "payment_method" => "required|string",
                   "delivery_date" => "required|date",
                   "delivery_address" => "required|string",
+                  "orderlat" => "required|string",
+                  "orderlong" => "required|string",
                   "street_no_name" => "nullable|string",
                   "bulding_no" => "nullable|string",
                   "floor" => "nullable|string",
                   "apartment" => "nullable|string",
                   "notes" => "nullable|string",
+                  "sales_tax" => "required",
+                  "delivery_fees" => "required",
+                  "subtotal" => "required",
+                  "total" => "required",
                   "products" => "required",                
               ];
               $validator = Validator::make($request->all(), $rules);
@@ -133,7 +149,7 @@ class UsersController extends Controller
               $orderTotal = 0;
               $itemTotal = 0;
               foreach ($products as $product) {
-                $dbProduct = Productsmodel::where('name_en', $product['name'])->orWhere('name_ar', $product['name'])->first();
+                $dbProduct = Productsmodel::find($product['id']);
                 $itemTotal = $dbProduct->price * $product['quantity'];
                 $orderTotal = $orderTotal + $itemTotal;
               }
@@ -170,26 +186,29 @@ class UsersController extends Controller
                 'status' => 'pending',
                 'step' => 1,
                 'payment_method' => $request->post('payment_method'), 
-                'delivery_date' => $request->post('delivery_date'),
-                'delivery_address' => $request->post('delivery_address'),
+                'delivery_date' => $request->post('delivery_date'), 
+                'delivery_address' => $request->post('delivery_address'),     
+                'orderlat' => $request->post('orderlat'),
+                'orderlong' => $request->post('orderlong'),
                 'street_no_name' => $request->post('street_no_name'),
                 'bulding_no' => $request->post('bulding_no'),
                 'floor' => $request->post('floor'),
                 'apartment' => $request->post('apartment'),
                 'notes' => $request->post('notes'),
-                'total' => $orderTotal
+                'sales_tax' => $request->post('sales_tax'),
+                'delivery_fees' => $request->post('delivery_fees'),
+                'subtotal' => $request->post('subtotal'),
+                'total' => $request->post('total')
               ]);
 
 
               //add order items to db
               $itemTotal = 0;
               foreach ($products as $product) {
-                $dbProduct = Productsmodel::where('name_en', $product['name'])
-                ->orWhere('name_ar', $product['name'])
-                ->get();
-                $itemTotal = $dbProduct[0]->price * $product['quantity'];
+                $dbProduct = Productsmodel::find($product['id']);
+                $itemTotal = $dbProduct->price * $product['quantity'];
                 OrderItemsmodel::create([ 
-                'product_id' => $dbProduct[0]->id,
+                'product_id' => $dbProduct->id,
                 'order_id' => $order->id,
                 'quantity' => $product['quantity'],
                 'total' => $itemTotal
@@ -203,8 +222,10 @@ class UsersController extends Controller
                 $error = $this->returnError($ex->getCode(),$ex->getMessage());
                 return response()->json($error, 500);
         }
-        $succesMsg = $this->returnSuccessMessage('order is placed successfully' , 'S001');
-        return response()->json($succesMsg, 200); 
+
+        $rsData = $this->returnData('order', $order,'order is placed successfully');
+        return response()->json($rsData, 200);    
+
       }
 
       //check that the order exist
@@ -218,10 +239,16 @@ class UsersController extends Controller
                   "payment_method" => "required|string",
                   "delivery_date" => "required|date",
                   "delivery_address" => "required|string",
+                  "orderlat" => "required|string",
+                  "orderlong" => "required|string",
                   "street_no_name" => "nullable|string",
                   "bulding_no" => "nullable|string",
                   "floor" => "nullable|string",
                   "apartment" => "nullable|string",
+                  "sales_tax" => "required",
+                  "delivery_fees" => "required",
+                  "subtotal" => "required",
+                  "total" => "required",
                   "notes" => "nullable|string",               
               ];
 
@@ -243,12 +270,17 @@ class UsersController extends Controller
                 'payment_method' => $request->post('payment_method'), 
                 'delivery_date' => $request->post('delivery_date'),
                 'delivery_address' => $request->post('delivery_address'),
+                'orderlat' => $request->post('orderlat'),
+                'orderlong' => $request->post('orderlong'),                
                 'street_no_name' => $request->post('street_no_name'),
                 'bulding_no' => $request->post('bulding_no'),
                 'floor' => $request->post('floor'),
                 'apartment' => $request->post('apartment'),
                 'notes' => $request->post('notes'),
-                'total' => 0
+                'sales_tax' => $request->post('sales_tax'),
+                'delivery_fees' => $request->post('delivery_fees'),
+                'subtotal' => $request->post('subtotal'),
+                'total' => $request->post('total')
               ]);
 
               $items = OrderItemsmodel::where('order_id',$request->post('lastOrder_id'))->get();
@@ -280,8 +312,8 @@ class UsersController extends Controller
           return response()->json($error, 500);                  
 
         }
-        $succesMsg = $this->returnSuccessMessage('order is placed successfully' , 'S001');
-        return response()->json($succesMsg, 200);                 
+        $rsData = $this->returnData('order', $order,'order is placed successfully');
+        return response()->json($rsData, 200);                  
       }      
 
 
@@ -292,7 +324,6 @@ class UsersController extends Controller
               //validation on the request
               $rules = [
                   "order_id" => "required|numeric",
-                  "refund_method" => "required|string",
               ];
               $validator = Validator::make($request->all(), $rules);
               if ($validator->fails()) {
@@ -302,12 +333,10 @@ class UsersController extends Controller
               }
 
 
-              //place the total in the user wallet
-              if($request->post('refund_method') == "wallet")
-              {
+                //place the total in the user wallet
                 $order = Ordersmodel::find($request->post('order_id'));
                 //****CODE**** (insert total in the user wallet)
-              }
+             
 
               //change order status to cancelled
               Ordersmodel::where('id',$request->post('order_id'))->update([
@@ -367,6 +396,8 @@ class UsersController extends Controller
                   "order_id" => "required|numeric",
                   "delivery_date" => "required|date",
                   "delivery_address" => "required|string",
+                  "orderlat" => "required|string",
+                  "orderlong" => "required|string",
                   "street_no_name" => "nullable|string",
                   "bulding_no" => "nullable|string",
                   "floor" => "nullable|string",
@@ -387,7 +418,7 @@ class UsersController extends Controller
               $orderTotal = 0;
               $itemTotal = 0;
               foreach ($products as $product) {
-                $dbProduct = Productsmodel::where('name_en', $product['name'])->orWhere('name_ar', $product['name'])->first();
+                $dbProduct = Productsmodel::find($product['id']);
                 $itemTotal = $dbProduct->price * $product['quantity'];
                 $orderTotal = $orderTotal + $itemTotal;
               }
@@ -443,6 +474,8 @@ class UsersController extends Controller
                 'payment_method' => $lpayment_method, 
                 'delivery_date' => $request->post('delivery_date'),
                 'delivery_address' => $request->post('delivery_address'),
+                'orderlat' => $request->post('orderlat'),
+                'orderlong' => $request->post('orderlong'),  
                 'street_no_name' => $request->post('street_no_name'),
                 'bulding_no' => $request->post('bulding_no'),
                 'floor' => $request->post('floor'),
@@ -457,12 +490,10 @@ class UsersController extends Controller
               //add order items to db
               $itemTotal = 0;
               foreach ($products as $product) {
-                $dbProduct = Productsmodel::where('name_en', $product['name'])
-                ->orWhere('name_ar', $product['name'])
-                ->get();
-                $itemTotal = $dbProduct[0]->price * $product['quantity'];
+                $dbProduct = Productsmodel::find($product['id']);
+                $itemTotal = $dbProduct->price * $product['quantity'];
                 OrderItemsmodel::create([ 
-                'product_id' => $dbProduct[0]->id,
+                'product_id' => $dbProduct->id,
                 'order_id' => $request->post('order_id'),
                 'quantity' => $product['quantity'],
                 'total' => $itemTotal
@@ -512,4 +543,126 @@ class UsersController extends Controller
         return response()->json($succesMsg, 200);  
       }
 
+
+
+      public function editProfile()
+      {
+        $user = auth()->user();
+
+        $currentorders = Ordersmodel::with('OrderItemsmodel.Productsmodel')->where([
+        ['user_id', '=', $user->id],
+        ['status', '!=', 'delivered'],
+        ])->Where([
+          ['user_id', '=', $user->id],
+          ['status', '!=', 'cancelled'],])
+        ->get();
+
+
+        $currentordersCnt = count($currentorders);
+        $user->currentordersCnt = $currentordersCnt;
+
+
+        $ordershistory = Ordersmodel::with('OrderItemsmodel.Productsmodel')->where([
+                ['user_id', '=', $user->id],
+                ['status', '=', 'delivered'],
+        ])->orWhere([
+          ['user_id', '=', $user->id],
+          ['status', '=', 'cancelled'],])
+        ->get();
+
+        $ordersHistoryCnt = count($ordershistory);
+        $user->ordersHistoryCnt = $ordersHistoryCnt;
+
+        $rsData = $this->returnData('user', $user);
+        return response()->json($rsData, 200);         
+      }
+
+      public function updateProfile(Request $request)
+      {
+        $user = auth()->user();
+        try {
+
+              //validation on the request
+                  //Add validation for products array learn from laravel docs.
+              $rules = [
+                  "phone" => "required|string",
+                  "ctyCode" => "required|string",
+                  "name" => "required|string",
+                  "email" => "required|email",
+                  "dateOfBirth" => "required|date",
+                  "gender" => "nullable|string",              
+              ];
+              $validator = Validator::make($request->all(), $rules);
+              if ($validator->fails()) {
+                $code = $this->returnCodeAccordingToInput($validator);
+                $error = $this->returnValidationError($code, $validator);
+                return response()->json($error, 422);
+              }
+        } catch (\Exception $ex) {
+          $error = $this->returnError($ex->getCode(),$ex->getMessage());
+          return response()->json($error, 500);
+        }
+
+
+        $user->update([
+            'name' => $request->post('name'),
+            'countryCode' =>$request->post('ctyCode'),
+            'phone' => $request->post('phone'),
+            'email' =>$request->post('email'),
+            'dateofbirth' => $request->post('dateOfBirth'),
+            'gender' => $request->post('gender'),      
+        ]);
+
+        $succesMsg = $this->returnSuccessMessage('Profile is updated successfully' , 'P001');
+        return response()->json($succesMsg, 200);          
+      }
+
+      public function message(Request $request)
+      {
+        try {
+              $rules = [
+              "name" => "required|string",
+              "email" => "required|email",
+              "subject" => "required|string",
+              "message" => "required|string",
+              "phone" => "required|string",                
+              ];
+
+              $validator = Validator::make($request->all(), $rules);
+              if ($validator->fails()) {
+                  $code = $this->returnCodeAccordingToInput($validator);
+                  $error = $this->returnValidationError($code, $validator);
+                  return response()->json($error, 422);
+              }
+
+              $message =  Message::create([
+                  'name' => $request->name,
+                  'email' => $request->email,
+                  'phone' => $request->phone,
+                  'subject' => $request->subject,
+                  'message' => $request->message,
+              ]);
+
+              $receiver_email     = ReceiverEmail::first();
+
+              $data = [
+              'name' => $request->name,
+              'email' => $request->email,
+              'subject' => $request->subject,
+              'message' => $request->message,
+              'phone' => $request->phone,
+              ];
+
+              Mail::to($receiver_email->email)->send(new ContactUs($data));
+
+              
+
+        }catch (\Exception $ex) {
+         $error = $this->returnError($ex->getCode(),$ex->getMessage());
+         return response()->json($error, 500);
+        }
+
+        $succesMsg = $this->returnSuccessMessage('Message is sent successfully' , 'M001');
+        return response()->json($succesMsg, 200);  
+      }
 }

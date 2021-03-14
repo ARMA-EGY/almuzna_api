@@ -72,7 +72,23 @@ class SettingsController extends Controller
       public function settings()
       {
         $settings = settings::all();
-        $rsData = $this->returnData('settings', $settings);
+        $data = array();
+        foreach ($settings as $setting ) {
+           if($setting->type == "decimal"){
+            $arr1 = array($setting->name => $setting->decimal_value);
+            $data = $data + $arr1;          
+           }elseif($setting->type == "text")
+           {
+            $arr1 = array($setting->name => $setting->text_value);
+            $data = $data + $arr1;             
+          }elseif($setting->type == "date")
+           {
+            $arr1 = array($setting->name => $setting->date_value);
+            $data = $data + $arr1;        
+           }
+
+        }
+        $rsData = $this->returnData('data', $data);
         return response()->json($rsData, 200);
 
       }

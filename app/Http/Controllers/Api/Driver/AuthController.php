@@ -1,9 +1,10 @@
 <?php
 
-namespace App\Http\Controllers\Api\User;
+namespace App\Http\Controllers\Api\Driver;
 
 use App\Http\Controllers\Controller;
 use App\drivers;
+use App\customers;
 use App\Traits\GeneralTrait;
 use Illuminate\Http\Request;
 use Tymon\JWTAuth\Facades\JWTAuth;
@@ -17,7 +18,8 @@ class AuthController extends Controller
 
     public function login(Request $request)
     {
-
+$dv = drivers::all();
+//dd($dv);
   
             $rules = [
                 "email" => "required",
@@ -27,43 +29,56 @@ class AuthController extends Controller
             $validator = Validator::make($request->all(), $rules);
 
             if ($validator->fails()) {
-                $code = $this->returnCodeAccordingToInput($validator);
-                return $this->returnValidationError($code, $validator);
+              $code = $this->returnCodeAccordingToInput($validator);
+              $error = $this->returnValidationError($code, $validator);
+              return response()->json($error, 422);
             }
 
             //login
 
             $credentials = $request->only(['email', 'password']);
-
+//dd($credentials);
+           // $token = Auth::guard('drivers-api')->attempt($credentials);
             $token = Auth::guard('drivers-api')->attempt($credentials);
-
             if (!$token)
-                return $this->returnError('E001', 'The login information is incorrect');
-
+            {
+                $error = $this->returnError('E001','The login information is incorrect');
+                return response()->json($error, 404);  
+            }
+            //$admin = Auth::guard('drivers-api')->user();
             $admin = Auth::guard('drivers-api')->user();
+
             $admin->api_token = $token;
             //return token
-            return $this->returnData('driver', $admin);
+            $rsData = $this->returnData('driver', $admin);
+            return response()->json($rsData, 200); 
 
        
 
 
     }
 
-  /*  public function logout(Request $request)
+    public function logout(Request $request)
     {
-         $token = $request -> header('auth-token');
+        $token = $request -> header('auth-token');
         if($token){
             try {
 
-                JWTAuth::setToken($token)->invalidate(); //logout
-            }catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e){
-                return  $this -> returnError('','some thing went wrongs');
+                JWTAuth::setToken($token)->invalidate(); 
+
+            }catch (\Tymon\JWTAuth\Exceptions\TokenInvalidException $e){ 
+                $error = $this -> returnError('','some thing went wrong');
+                return response()->json($error, 500);
             }
-            return $this->returnSuccessMessage('Logged out successfully');
+
+            $succesMsg = $this->returnSuccessMessage('Logged out successfully');
+            return response()->json($succesMsg, 200);  
         }else{
-            $this -> returnError('','some thing went wrongs');
+
+                $error = $this -> returnError('','some thing went wrongs');
+                return response()->json($error, 404);  
+            
         }
 
-    }*/
+    }
 }

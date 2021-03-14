@@ -1,6 +1,6 @@
 <?php
 
-namespace App\Http\Controllers\Api\Product;
+namespace App\Http\Controllers\Api\Offers;
 
 use Illuminate\Http\Request;
 use App\Http\Controllers\Controller;
@@ -8,7 +8,7 @@ use App\Productsmodel;
 use App\Traits\GeneralTrait;
 
 
-class ProductsController extends Controller
+class OffersController extends Controller
 {
 
     use GeneralTrait;
@@ -33,10 +33,10 @@ class ProductsController extends Controller
       public function index()
       {
         //is it better to return the name based on the lang sent in the request or return both as negm
-        $products = Productsmodel::where('type','product')->get();
+        $products = Productsmodel::where('type','offer')->get();
         //should we return error if emtpy or not
         if($products->isEmpty())
-            return $this->returnError('P404','no products found');
+            return $this->returnError('O404','no offers found');
         return $this->returnData('products', $products);
       }
 

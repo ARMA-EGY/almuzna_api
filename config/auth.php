@@ -14,7 +14,7 @@ return [
     */
 
     'defaults' => [
-        'guard' => 'web',
+        'guard' => 'drivers-api',
         'passwords' => 'users',
     ],
 
@@ -54,7 +54,7 @@ return [
 
         'drivers-api' => [
             'driver' => 'jwt',
-            'provider' => 'drivers',
+            'provider' => 'driverss',
         ],        
     ],
 
@@ -82,7 +82,7 @@ return [
         ], 'customers' => [
             'driver' => 'eloquent',
             'model' => App\customers::class,
-        ], 'drivers' => [
+        ], 'driverss' => [
             'driver' => 'eloquent',
             'model' => App\drivers::class,
         ],

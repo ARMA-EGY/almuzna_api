@@ -27,6 +27,7 @@ Route::group(['middleware' => ['api','CheckPassword','ChangeLanguage'], 'namespa
     Route::group(['prefix' => 'user','namespace'=>'User'],function (){
     	Route::post('login', 'AuthController@login');
         Route::group(['middleware' => 'AssignGuard:customers-api'], function(){
+            Route::post('logout','AuthController@logout');
             Route::get('currentorders', 'UsersController@currentorders');
             Route::get('ordershistory', 'UsersController@ordershistory');
             Route::get('order/{orderId}', 'UsersController@order');
@@ -35,6 +36,10 @@ Route::group(['middleware' => ['api','CheckPassword','ChangeLanguage'], 'namespa
             Route::post('cancelorder', 'UsersController@cancelOrder');
             Route::get('editorder/{orderId}', 'UsersController@editorder');
             Route::post('updateorder', 'UsersController@updateorder');
+            Route::get('profile', 'UsersController@editProfile');
+            Route::post('profile', 'UsersController@updateProfile');
+            Route::post('message', 'UsersController@message');
+
         });
  
     });
@@ -43,19 +48,20 @@ Route::group(['middleware' => ['api','CheckPassword','ChangeLanguage'], 'namespa
     Route::group(['prefix' => 'driver','namespace'=>'Driver'],function (){
     	Route::post('login', 'AuthController@login');
         Route::group(['middleware' => 'AssignGuard:drivers-api'], function(){
+            Route::post('logout','AuthController@logout');
             Route::post('startorder', 'DriverController@startOrder');
-            //Route::get('finishorder', 'DriverController@finishOrder');
+            Route::post('finishorder', 'DriverController@finishOrder');
             //Route::get('recievedcash', 'DriverController@recievedCash');
             Route::get('assignedorders', 'DriverController@assignedOrders');
             Route::get('ordershistory', 'DriverController@ordersHistory');
             //Route::get('ongoingorder', 'DriverController@ongoingOrder');
             Route::get('order/{orderId}', 'DriverController@order');
-        });    
+        });
     });
 
     //--- Offers Endpoints ---
     Route::group(['prefix' => 'offers','namespace'=>'Offers'],function (){
-    
+        Route::get('/', 'OffersController@index');    
     });
 
 	//--- Pages Endpoints ---

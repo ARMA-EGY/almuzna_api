@@ -32,7 +32,7 @@ class DriverController extends Controller
     
     public function __construct()
     {
-		  //$this->middleware('auth');
+      //$this->middleware('auth');
     }
 
     /**
@@ -114,14 +114,24 @@ class DriverController extends Controller
           }
 
           //select an ongoing order
-          $startedOrder = Ordersmodel::with('OrderItemsmodel.Productsmodel')->where([
+          $startedOrder = Ordersmodel::where([
                   ['driver_id', '=', 1],
                   ['status', '=', 'on the way'],
           ])->get();
 
+          $currentOrder = Ordersmodel::where([
+                  ['driver_id', '=', 1],
+                  ['id', '=', $request->post('order_id')],
+          ])->get();
+
+          if($currentOrder->isEmpty())
+          {
+                    $error = $this->returnError('O404','order not found');
+                    return response()->json($error, 404);   
+          }
 
           //if there is no ongoing order start the order
-          if($startedOrder->isEmpty())
+          if($startedOrder->isEmpty() && $currentOrder[0]->status == 'pending')
           {
             Ordersmodel::where([
                   ['driver_id', '=', 1],
@@ -138,7 +148,7 @@ class DriverController extends Controller
 
 
           //error message
-           $error = $this->returnError('O408','There is an ongoing order');
+           $error = $this->returnError('O408','There might be an ongoing order or this order is not pending');
             return response()->json($error, 422);   
 
           
@@ -148,6 +158,65 @@ class DriverController extends Controller
                 }
       }      
 
+      public function finishorder(Request $request)
+      {
+        try {
+          //validation on the request
+          $rules = [
+              "order_id" => "required|numeric"
+          ];
 
+          $validator = Validator::make($request->all(), $rules);
+          if ($validator->fails()) {
+            $code = $this->returnCodeAccordingToInput($validator);
+            $error = $this->returnValidationError($code, $validator);
+            return response()->json($error, 422);
+          }
+
+          //select an ongoing order
+          $currentOrder = Ordersmodel::where([
+                  ['driver_id', '=', 1],
+                  ['id', '=', $request->post('order_id')],
+          ])->get();
+
+
+          if($currentOrder->isEmpty())
+          {
+                    $error = $this->returnError('O404','order not found');
+                    return response()->json($error, 404);   
+          }
+
+
+          //if the order is ongoing order finish it
+          if($currentOrder[0]->status == 'on the way')
+          {
+
+            Ordersmodel::where([
+                ['driver_id', '=', 1],
+                ['id', '=', $request->post('order_id')],
+             ])
+             ->update([
+                   'status' => 'delivered'
+                    ]);
+
+            //success message
+            $succesMsg = $this->returnSuccessMessage('order is finished successfully' , 'S003');
+            return response()->json($succesMsg, 200);  
+
+
+          }else{
+           //error message
+           $error = $this->returnError('O409','please check that you started the order');
+            return response()->json($error, 422);           
+          }
+
+          
+        } catch (\Exception $ex) {
+            $error = $this->returnError($ex->getCode(),$ex->getMessage());
+            return response()->json($error, 500);  
+                }
+
+       
+      }       
 
 }
